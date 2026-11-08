@@ -1,0 +1,12 @@
+{
+  "name": "dyland-opencode-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.js", "./tui": "./tui.ts" },
+  "scripts": {
+    "test": "node --test bridge.test.js tui.test.js",
+    "test:e2e": "node e2e.test.js"
+  },
+  "dependencies": { "@opencode/plugin": "2.1.1" }
+}
