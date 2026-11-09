@@ -191,6 +191,10 @@ func selfCheck() {
     do { try TerminalRouter.selfCheck() }
     catch { fatalError("TerminalRouter self-check failed: \(error)") }
     if Bundle.main.bundleURL.pathExtension == "app" {
+        guard let iconURL = Bundle.main.url(forResource: "Dyland", withExtension: "icns"),
+              let icon = NSImage(contentsOf: iconURL), !icon.representations.isEmpty else {
+            fatalError("Bundled Dyland.icns missing or invalid")
+        }
         guard let url = Bundle.main.url(forResource: "dyland-sound", withExtension: "mp3"),
               let sound = NSSound(contentsOf: url, byReference: false), sound.duration > 0 else {
             fatalError("Bundled dyland-sound.mp3 missing or invalid")

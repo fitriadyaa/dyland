@@ -5,6 +5,7 @@ swift build -c release
 app="$PWD/dist/Dyland.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp dyland-sound.mp3 "$app/Contents/Resources/dyland-sound.mp3"
+cp Resources/Dyland.icns "$app/Contents/Resources/Dyland.icns"
 cp .build/release/Dyland "$app/Contents/MacOS/Dyland"
 cp Info.plist "$app/Contents/Info.plist"
 codesign --force --sign - "$app"
