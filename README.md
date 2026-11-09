@@ -26,7 +26,7 @@ Screenshots use the real SwiftUI views with demo session data, not private OpenC
 - Blend into a display notch, or use the top center of a display without one.
 - Use native settings, optional launch at login, and animations that respect Reduce Motion.
 
-![Centered compact working status](docs/screenshots/compact.png)
+![Compact working indicator beside the notch](docs/screenshots/compact.png)
 
 ![Dyland session selection and settings window](docs/screenshots/settings.png)
 
@@ -118,7 +118,8 @@ Sounds are limited to one every two seconds.
 
 New attention notifications expand for three seconds, then become compact unless hovered over.
 Regular notifications expire after seven seconds; hovering keeps them visible.
-Working status remains compact while execution is active.
+While execution is active, the compact island widens horizontally and shows a small animated indicator to the left of the notch, without a panel below it.
+Hover still expands the usual details, and clicking still opens the session in Ghostty.
 Questions and permission requests stay available while pending, including when compact.
 Dismissing the island hides that notification; it does not answer a question or grant permission.
 Dismissed pending requests remain accessible through the menu and session list.

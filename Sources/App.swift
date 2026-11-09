@@ -110,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             centerX = (left.maxX + right.minX) / 2
             model.notchWidth = max(180, right.minX - left.maxX)
         }
-        let width = max(480, model.notchWidth + 40)
+        let width = max(480, model.notchWidth + 112)
         panel.setFrame(NSRect(x: centerX - width / 2, y: screen.frame.maxY - 190 - topInset, width: width, height: 190), display: true)
     }
     private func updateHitRegion() {

@@ -42,8 +42,9 @@ final class Model: ObservableObject {
     }
 
     var expanded: Bool { hovered || (current != nil && autoExpanded) }
-    var islandWidth: CGFloat { expanded ? max(440, notchWidth) : current == nil ? notchWidth : max(270, notchWidth) }
-    var islandHeight: CGFloat { notchHeight + (expanded ? 100 : current == nil ? 0 : 48) }
+    var compactWorking: Bool { current?.kind == "working" && !expanded }
+    var islandWidth: CGFloat { expanded ? max(440, notchWidth) : compactWorking ? notchWidth + 72 : current == nil ? notchWidth : max(270, notchWidth) }
+    var islandHeight: CGFloat { compactWorking ? max(notchHeight, 28) : notchHeight + (expanded ? 100 : current == nil ? 0 : 48) }
     func setHovered(_ inside: Bool) {
         guard hovered != inside else { return }
         hovered = inside

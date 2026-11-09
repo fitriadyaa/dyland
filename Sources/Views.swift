@@ -18,60 +18,75 @@ struct IslandView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                Color.clear.frame(height: model.notchHeight + (model.expanded ? 5 : 7))
-                if let notice = model.current {
-                    HStack(spacing: 14) {
-                        Image(systemName: notice.symbol)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(notice.tint)
-                            .frame(width: 34, height: 34)
-                            .background(notice.tint.opacity(0.16), in: Circle())
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(notice.label).font(.system(size: 13, weight: .semibold))
-                            if model.expanded {
-                                Text(model.title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.78)).lineLimit(1)
-                            }
-                        }
-                        if model.expanded {
-                            Spacer(minLength: 0)
-                            Button(action: model.dismiss) {
-                                Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).frame(width: 28, height: 28)
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.white.opacity(0.7))
-                            .accessibilityLabel("Dismiss notification")
-                            .help("Dismiss notification; questions remain available in the menu")
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    if model.expanded {
-                        HStack {
-                            Text(model.pending.count > 1 ? "\(model.pending.count) pending requests" : "OpenCode · Ghostty")
-                                .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.65))
-                            Spacer()
-                            Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.8))
-                        }.padding(.horizontal, 22).padding(.top, 12)
-                    }
-                } else if model.expanded {
-                    HStack(spacing: 14) {
-                        Image(systemName: "capsule.inset.filled")
-                            .font(.system(size: 20, weight: .semibold))
+            ZStack(alignment: .top) {
+                if model.compactWorking {
+                    HStack(spacing: 0) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(.cyan)
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Dyland").font(.system(size: 14, weight: .semibold))
-                            Text(model.paused ? "Notifications paused" : model.connected ? "\(model.selected.count) sessions monitored" : "Waiting for OpenCode")
-                                .font(.system(size: 12)).foregroundStyle(.white.opacity(0.78))
-                        }
-                        Spacer()
-                        Image(systemName: "gearshape").foregroundStyle(.white.opacity(0.7))
+                            .symbolEffect(.variableColor.iterative, options: .repeating, isActive: !reduceMotion)
+                            .frame(width: 36, height: model.islandHeight)
+                        Color.clear.frame(width: model.notchWidth)
+                        Color.clear.frame(width: 36)
                     }
-                    .padding(.horizontal, 22)
-                    Text("Click for sessions and settings")
-                        .font(.system(size: 11)).foregroundStyle(.white.opacity(0.65))
-                        .padding(.top, 12)
+                    .accessibilityLabel("Agent working")
+                } else {
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: model.notchHeight + (model.expanded ? 5 : 7))
+                        if let notice = model.current {
+                            HStack(spacing: 14) {
+                                Image(systemName: notice.symbol)
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(notice.tint)
+                                    .frame(width: 34, height: 34)
+                                    .background(notice.tint.opacity(0.16), in: Circle())
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(notice.label).font(.system(size: 13, weight: .semibold))
+                                    if model.expanded {
+                                        Text(model.title).font(.system(size: 13)).foregroundStyle(.white.opacity(0.78)).lineLimit(1)
+                                    }
+                                }
+                                if model.expanded {
+                                    Spacer(minLength: 0)
+                                    Button(action: model.dismiss) {
+                                        Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).frame(width: 28, height: 28)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .accessibilityLabel("Dismiss notification")
+                                    .help("Dismiss notification; questions remain available in the menu")
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            if model.expanded {
+                                HStack {
+                                    Text(model.pending.count > 1 ? "\(model.pending.count) pending requests" : "OpenCode · Ghostty")
+                                        .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.65))
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white.opacity(0.8))
+                                }.padding(.horizontal, 22).padding(.top, 12)
+                            }
+                        } else if model.expanded {
+                            HStack(spacing: 14) {
+                                Image(systemName: "capsule.inset.filled")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(.cyan)
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text("Dyland").font(.system(size: 14, weight: .semibold))
+                                    Text(model.paused ? "Notifications paused" : model.connected ? "\(model.selected.count) sessions monitored" : "Waiting for OpenCode")
+                                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.78))
+                                }
+                                Spacer()
+                                Image(systemName: "gearshape").foregroundStyle(.white.opacity(0.7))
+                            }
+                            .padding(.horizontal, 22)
+                            Text("Click for sessions and settings")
+                                .font(.system(size: 11)).foregroundStyle(.white.opacity(0.65))
+                                .padding(.top, 12)
+                        }
+                        Spacer(minLength: 0)
+                    }
                 }
-                Spacer(minLength: 0)
             }
             .frame(width: model.islandWidth, height: model.islandHeight, alignment: .top)
             .clipped()
