@@ -21,11 +21,17 @@ struct IslandView: View {
             ZStack(alignment: .top) {
                 if model.compactWorking {
                     HStack(spacing: 0) {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(.cyan)
-                            .symbolEffect(.variableColor.iterative, options: .repeating, isActive: !reduceMotion)
-                            .frame(width: 36, height: model.islandHeight)
+                        // Symbol effects can starve AppKit's main queue in an accessory app.
+                        TimelineView(.periodic(from: .now, by: 0.4)) { context in
+                            HStack(spacing: 3) {
+                                ForEach(0..<3) { dot in
+                                    Circle()
+                                        .fill(.cyan.opacity(reduceMotion || Int(context.date.timeIntervalSince1970 / 0.4) % 3 == dot ? 1 : 0.35))
+                                        .frame(width: 3, height: 3)
+                                }
+                            }
+                        }
+                        .frame(width: 36, height: model.islandHeight)
                         Color.clear.frame(width: model.notchWidth)
                         Color.clear.frame(width: 36)
                     }
