@@ -11,6 +11,9 @@ final class Model: ObservableObject {
             if let current, !selected.contains(current.sessionID), current.sessionID != "preview" { self.current = nil }
         }
     }
+    @Published var terminal: TerminalRouter.Terminal {
+        didSet { UserDefaults.standard.set(terminal.rawValue, forKey: "terminal") }
+    }
     @Published var sound: Bool { didSet { UserDefaults.standard.set(sound, forKey: "sound") } }
     @Published var paused = false { didSet { if paused { current = nil } } }
     @Published var connected = false
@@ -24,6 +27,7 @@ final class Model: ObservableObject {
     @Published var autoExpanded = false
     @Published var notchWidth: CGFloat = 180
     @Published var notchHeight: CGFloat = 32
+    @Published var hasNotch = true
     @Published var loginEnabled = SMAppService.mainApp.status == .enabled
     private var delivery = Delivery()
     private var working: [String: Notice] = [:]
@@ -39,12 +43,33 @@ final class Model: ObservableObject {
     init() {
         selected = Set(UserDefaults.standard.stringArray(forKey: "sessions") ?? [])
         sound = UserDefaults.standard.object(forKey: "sound") as? Bool ?? true
+        terminal = TerminalRouter.Terminal(rawValue: UserDefaults.standard.string(forKey: "terminal") ?? "") ?? .ghostty
     }
 
     var expanded: Bool { hovered || (current != nil && autoExpanded) }
     var compactWorking: Bool { current?.kind == "working" && !expanded }
-    var islandWidth: CGFloat { expanded ? max(440, notchWidth) : compactWorking ? notchWidth + 72 : current == nil ? notchWidth : max(270, notchWidth) }
-    var islandHeight: CGFloat { compactWorking ? max(notchHeight, 28) : notchHeight + (expanded ? 100 : current == nil ? 0 : 48) }
+    var islandNotices: [Notice] {
+        guard let current else { return [] }
+        if current.needsResponse {
+            return Array(([current] + pending.filter { $0.id != current.id }).prefix(3))
+        }
+        if current.kind == "working" {
+            return Array(([current] + working.values.filter { selected.contains($0.sessionID) && $0.id != current.id }
+                .sorted { $0.timestamp > $1.timestamp }).prefix(3))
+        }
+        return [current]
+    }
+    var islandActivityCount: Int { current?.needsResponse == true ? pending.count : current?.kind == "working" ? workingCount : 0 }
+    var islandWidth: CGFloat {
+        if expanded { return max(420, hasNotch ? notchWidth + 80 : 0) }
+        return hasNotch ? notchWidth + (current == nil ? 0 : islandActivityCount > 1 ? 128 : 100) : 212
+    }
+    var islandGeometry: IslandGeometry?
+    var islandHeaderHeight: CGFloat { hasNotch ? max(notchHeight, 28) : 32 }
+    var islandHeight: CGFloat {
+        if expanded { return (hasNotch ? islandHeaderHeight : 0) + 58 + CGFloat(max(1, islandNotices.count)) * 44 }
+        return islandHeaderHeight
+    }
     func setHovered(_ inside: Bool) {
         guard hovered != inside else { return }
         hovered = inside
@@ -53,7 +78,18 @@ final class Model: ObservableObject {
     func updateExpansion(now: Double) {
         if autoExpanded, now >= expansionExpires { autoExpanded = false }
     }
-    var title: String { session(current?.sessionID)?.title ?? "Dyland Preview" }
+    var title: String {
+        guard let session = session(current?.sessionID) else { return "Dyland Preview" }
+        return session.title.isEmpty ? "Untitled session" : session.title
+    }
+    var monitoredCount: Int { sessions.filter { selected.contains($0.id) }.count }
+    var workingCount: Int { connected ? working.keys.filter { selected.contains($0) }.count : 0 }
+    var attentionCount: Int { pending.count }
+    func activity(for sessionID: String) -> Notice? {
+        pending.first { $0.sessionID == sessionID }
+            ?? (connected ? working[sessionID] : nil)
+            ?? history.first { $0.sessionID == sessionID && !$0.needsResponse }
+    }
     func session(_ id: String?) -> Session? { sessions.first { $0.id == id } }
     func toggle(_ id: String) {
         if selected.contains(id) { selected.remove(id) } else { selected.insert(id) }
@@ -61,7 +97,7 @@ final class Model: ObservableObject {
     func start() {
         poll = Task { [weak self] in
             while !Task.isCancelled {
-                let read = await Task.detached(priority: .utility) { Bridge.read() }.value
+                let read = await Task.detached(priority: .utility) { autoreleasepool { Bridge.read() } }.value
                 self?.apply(read)
                 try? await Task.sleep(for: .seconds(1))
             }
@@ -70,8 +106,9 @@ final class Model: ObservableObject {
     func apply(_ read: BridgeRead) {
         let now = Date().timeIntervalSince1970
         updateExpansion(now: now)
-        connected = !read.snapshots.isEmpty
-        if let problem = read.problem { self.problem = problem }
+        let isConnected = !read.snapshots.isEmpty
+        if connected != isConnected { connected = isConnected }
+        if let problem = read.problem, self.problem != problem { self.problem = problem }
         guard connected else {
             if paused || current?.kind == "working" { current = nil }
             if let current, !current.needsResponse, now > expires, !hovered { self.current = nil }
@@ -81,14 +118,20 @@ final class Model: ObservableObject {
         for session in read.snapshots.flatMap(\.sessions) {
             if session.updatedAt >= (latest[session.id]?.updatedAt ?? 0) { latest[session.id] = session }
         }
-        if connected { sessions = latest.values.sorted { $0.updatedAt > $1.updatedAt } }
-        pending = Dictionary(read.snapshots.flatMap(\.pending).map { (pendingKey($0), $0) }, uniquingKeysWith: { a, b in a.timestamp <= b.timestamp ? a : b })
+        let sessions = latest.values.sorted { $0.updatedAt > $1.updatedAt }
+        if self.sessions != sessions { self.sessions = sessions }
+        let pending = Dictionary(read.snapshots.flatMap(\.pending).map { (pendingKey($0), $0) }, uniquingKeysWith: { a, b in a.timestamp <= b.timestamp ? a : b })
             .values.filter { selected.contains($0.sessionID) }.sorted { $0.timestamp > $1.timestamp }
+        if self.pending != pending { self.pending = pending }
         let fresh = delivery.consume(read.snapshots, selected: selected, now: now)
-        working.removeAll()
+        var working: [String: Notice] = [:]
         for notice in read.snapshots.flatMap(\.notices).sorted(by: { $0.timestamp < $1.timestamp }) {
             if notice.kind == "working" { working[notice.sessionID] = notice }
-            else if notice.kind != "hook" { working.removeValue(forKey: notice.sessionID) }
+            else if ["done", "error", "interrupted"].contains(notice.kind) { working.removeValue(forKey: notice.sessionID) }
+        }
+        if self.working != working {
+            objectWillChange.send()
+            self.working = working
         }
         dismissed.formIntersection(Set(pending.map(pendingKey)))
         if let current, current.kind == "working", working[current.sessionID] == nil { self.current = nil }
@@ -162,10 +205,11 @@ final class Model: ObservableObject {
     func open(_ session: Session) {
         guard !openingSession else { return }
         openingSession = true
-        routingStatus = "Opening session in Ghostty…"
+        let terminal = terminal
+        routingStatus = "Opening session in \(terminal.rawValue)…"
         Task {
             defer { openingSession = false }
-            do { routingStatus = try await TerminalRouter.open(session) }
+            do { routingStatus = try await TerminalRouter.open(session, terminal: terminal) }
             catch { routingStatus = nil; problem = error.localizedDescription; openSettings?() }
         }
     }
