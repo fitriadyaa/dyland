@@ -21,11 +21,28 @@ struct MascotSchedule: TimelineSchedule {
     }
 }
 
-// A1 capsule, drawn natively without the concept sheet's background or square canvas.
+enum MascotStyle: String, CaseIterable {
+    case capsule, ghost
+
+    var label: String { self == .capsule ? "Capsule" : "Lilac Ghost" }
+    var color: Color {
+        self == .capsule
+            ? Color(red: 236 / 255, green: 236 / 255, blue: 231 / 255)
+            : Color(red: 229 / 255, green: 224 / 255, blue: 239 / 255)
+    }
+    var baseColor: Color {
+        self == .capsule
+            ? Color(red: 69 / 255, green: 75 / 255, blue: 80 / 255)
+            : Color(red: 101 / 255, green: 89 / 255, blue: 118 / 255)
+    }
+}
+
+// Native, transparent variants of the A1 capsule and B1 ghost concepts.
 struct DylandMark: View {
     var kind: String?
     var attentive = false
     var animating = true
+    var style: MascotStyle = .capsule
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func eyes(at time: TimeInterval, reducedMotion: Bool) -> (height: CGFloat, x: CGFloat, y: CGFloat) {
@@ -64,8 +81,18 @@ struct DylandMark: View {
                 body.addLine(to: CGPoint(x: 124, y: 128))
                 body.addLine(to: CGPoint(x: 8, y: 128))
                 body.closeSubpath()
-                context.fill(body, with: .color(Color(red: 236 / 255, green: 236 / 255, blue: 231 / 255)))
-                let ink = Color(red: 69 / 255, green: 75 / 255, blue: 80 / 255)
+                if style == .ghost {
+                    body = Path { path in
+                        path.move(to: CGPoint(x: 16, y: 128))
+                        path.addLine(to: CGPoint(x: 16, y: 90))
+                        path.addCurve(to: CGPoint(x: 60, y: 51), control1: CGPoint(x: 16, y: 65), control2: CGPoint(x: 33, y: 51))
+                        path.addCurve(to: CGPoint(x: 106, y: 91), control1: CGPoint(x: 87, y: 51), control2: CGPoint(x: 106, y: 67))
+                        path.addCurve(to: CGPoint(x: 120, y: 117), control1: CGPoint(x: 106, y: 108), control2: CGPoint(x: 116, y: 106))
+                        path.addCurve(to: CGPoint(x: 111, y: 128), control1: CGPoint(x: 122, y: 123), control2: CGPoint(x: 118, y: 128))
+                        path.closeSubpath()
+                    }
+                }
+                context.fill(body, with: .color(style.color))
                 var base = Path()
                 base.move(to: CGPoint(x: 8, y: 108))
                 base.addCurve(
@@ -74,8 +101,19 @@ struct DylandMark: View {
                 base.addLine(to: CGPoint(x: 124, y: 128))
                 base.addLine(to: CGPoint(x: 8, y: 128))
                 base.closeSubpath()
+                if style == .ghost {
+                    base = Path { path in
+                        path.move(to: CGPoint(x: 16, y: 113))
+                        path.addCurve(to: CGPoint(x: 52, y: 114), control1: CGPoint(x: 30, y: 105), control2: CGPoint(x: 37, y: 120))
+                        path.addCurve(to: CGPoint(x: 89, y: 113), control1: CGPoint(x: 67, y: 108), control2: CGPoint(x: 76, y: 120))
+                        path.addCurve(to: CGPoint(x: 120, y: 118), control1: CGPoint(x: 102, y: 106), control2: CGPoint(x: 111, y: 119))
+                        path.addLine(to: CGPoint(x: 124, y: 128))
+                        path.addLine(to: CGPoint(x: 16, y: 128))
+                        path.closeSubpath()
+                    }
+                }
                 context.clip(to: body)
-                context.fill(base, with: .color(ink))
+                context.fill(base, with: .color(style.baseColor))
                 for x: CGFloat in [41.5, 75.5] {
                     let eye = RoundedRectangle(cornerRadius: min(6, eyes.height / 2))
                         .path(

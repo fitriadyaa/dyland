@@ -8,8 +8,11 @@ struct SettingsCheck {
     @MainActor static func main() throws {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
-        // Preview data must never overwrite the user's monitored sessions.
-        UserDefaults.standard.setVolatileDomain(["sessions": ["design", "review"]], forName: UserDefaults.argumentDomain)
+        // Preview data must never overwrite the user's preferences.
+        UserDefaults.standard.setVolatileDomain([
+            "sessions": ["design", "review"],
+            "mascot": CommandLine.arguments.contains("--ghost") ? "ghost" : "capsule",
+        ], forName: UserDefaults.argumentDomain)
         let model = Model()
         let now = Date().timeIntervalSince1970
         let sessions = [
@@ -20,7 +23,7 @@ struct SettingsCheck {
         let working = Notice(id: "work", sessionID: "design", kind: "working", timestamp: now)
         let permission = Notice(id: "approval", sessionID: "review", kind: "permission", timestamp: now - 90)
         model.apply(BridgeRead(snapshots: [Snapshot(version: 1, updatedAt: now, sessions: sessions, notices: [working], pending: [permission])]))
-        let output = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? NSTemporaryDirectory(), isDirectory: true)
+        let output = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first(where: { $0 != "--ghost" }) ?? NSTemporaryDirectory(), isDirectory: true)
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         for (name, width, height, scheme, tab) in [
             ("settings", 880.0, 660.0, ColorScheme.dark, 0),

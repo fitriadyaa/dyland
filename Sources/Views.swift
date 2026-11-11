@@ -129,7 +129,7 @@ struct IslandView: View {
     private var compactBar: some View {
         Button(action: model.openCurrent) {
             HStack(spacing: 0) {
-                DylandMark(kind: model.current?.kind ?? (model.paused ? "paused" : nil), attentive: model.hovered, animating: !model.expanded)
+                DylandMark(kind: model.current?.kind ?? (model.paused ? "paused" : nil), attentive: model.hovered, animating: !model.expanded, style: model.mascot)
                     .frame(width: 26, height: 18)
                     .frame(maxWidth: .infinity, alignment: model.hasNotch ? .trailing : .leading)
                 if model.hasNotch {
@@ -163,7 +163,7 @@ struct IslandView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 HStack(spacing: 8) {
-                    DylandMark(kind: model.current?.kind ?? (model.paused ? "paused" : nil), attentive: model.hovered)
+                    DylandMark(kind: model.current?.kind ?? (model.paused ? "paused" : nil), attentive: model.hovered, style: model.mascot)
                         .frame(width: 22, height: 18)
                     Text(model.current == nil ? "Dyland" : status)
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(tint)
@@ -266,7 +266,7 @@ struct SettingsView: View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 10) {
-                    DylandMark(kind: nil, animating: false).frame(width: 30, height: 22)
+                    DylandMark(kind: nil, animating: false, style: model.mascot).frame(width: 30, height: 22)
                     Text("Dyland").font(.title3.weight(.semibold))
                 }.padding(.horizontal, 18).padding(.top, 22)
                 VStack(spacing: 4) {
@@ -440,6 +440,19 @@ struct SettingsView: View {
 
     private var settings: some View {
         Form {
+            Section("Appearance") {
+                Picker("Mascot", selection: $model.mascot) {
+                    ForEach(MascotStyle.allCases, id: \.self) { style in
+                        Text(style.label).tag(style)
+                    }
+                }
+                HStack(spacing: 12) {
+                    DylandMark(kind: "working", animating: false, style: model.mascot)
+                        .frame(width: 36, height: 28)
+                    Text("Changes apply immediately. Both mascots use the same subtle eye animations.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
             Section("Notifications") {
                 Toggle("Notification sound", isOn: $model.sound)
                 Toggle("Pause notifications", isOn: $model.paused)

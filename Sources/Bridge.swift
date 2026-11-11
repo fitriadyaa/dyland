@@ -162,6 +162,11 @@ func selfCheck() {
     let defaults = UserDefaults.standard
     let saved = defaults.dictionaryRepresentation()
     let model = Model()
+    model.mascot = .ghost
+    precondition(Model().mascot == .ghost, "Mascot selection must survive restart")
+    precondition(DylandMark(kind: "working", style: .ghost).eyes(at: 4.5, reducedMotion: false).height == workingMark.eyes(at: 4.5, reducedMotion: false).height)
+    model.mascot = .capsule
+    precondition(Model().mascot == .capsule)
     model.selected = ["ses_test"]
     model.sound = false
     precondition(!model.expanded && model.islandWidth == model.notchWidth)
@@ -265,7 +270,7 @@ func selfCheck() {
     precondition(model.islandNotices.allSatisfy { model.selected.contains($0.sessionID) })
     model.setHovered(true)
     precondition(model.islandHeight == model.notchHeight + 146)
-    for key in ["sessions", "sound"] {
+    for key in ["sessions", "sound", "mascot"] {
         if let old = saved[key] { defaults.set(old, forKey: key) } else { defaults.removeObject(forKey: key) }
     }
     do { try TerminalRouter.selfCheck() }

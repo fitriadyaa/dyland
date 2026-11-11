@@ -14,6 +14,9 @@ final class Model: ObservableObject {
     @Published var terminal: TerminalRouter.Terminal {
         didSet { UserDefaults.standard.set(terminal.rawValue, forKey: "terminal") }
     }
+    @Published var mascot: MascotStyle {
+        didSet { UserDefaults.standard.set(mascot.rawValue, forKey: "mascot") }
+    }
     @Published var sound: Bool { didSet { UserDefaults.standard.set(sound, forKey: "sound") } }
     @Published var paused = false { didSet { if paused { current = nil } } }
     @Published var connected = false
@@ -42,6 +45,7 @@ final class Model: ObservableObject {
 
     init() {
         selected = Set(UserDefaults.standard.stringArray(forKey: "sessions") ?? [])
+        mascot = MascotStyle(rawValue: UserDefaults.standard.string(forKey: "mascot") ?? "") ?? .capsule
         sound = UserDefaults.standard.object(forKey: "sound") as? Bool ?? true
         terminal = TerminalRouter.Terminal(rawValue: UserDefaults.standard.string(forKey: "terminal") ?? "") ?? .ghostty
     }

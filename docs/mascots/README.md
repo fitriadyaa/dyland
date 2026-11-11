@@ -1,6 +1,6 @@
 # Dyland mascot concepts
 
-Hand-authored SVG concepts, not AI image-generator output. No existing mascot assets were copied. A1 was selected for the application. Its background-free native SwiftUI implementation lives in `Sources/DylandMark.swift`; the six original concept assets below are preserved.
+Hand-authored SVG concepts, not AI image-generator output. No existing mascot assets were copied. A1 is the default mascot; B1 Lilac Ghost is also available in General > Appearance. Both background-free native SwiftUI implementations live in `Sources/DylandMark.swift` and share the same eye animations. The six original concept assets below are preserved.
 
 ![Six candidate concepts](preview.png)
 
