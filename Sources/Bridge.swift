@@ -165,6 +165,15 @@ func selfCheck() {
     model.mascot = .ghost
     precondition(Model().mascot == .ghost, "Mascot selection must survive restart")
     precondition(DylandMark(kind: "working", style: .ghost).eyes(at: 4.5, reducedMotion: false).height == workingMark.eyes(at: 4.5, reducedMotion: false).height)
+    model.mascot = .hoodie
+    precondition(Model().mascot == .hoodie, "Hoodie selection must survive restart")
+    precondition(MascotStyle.allCases.count == 3)
+    precondition(DylandMark.hoodieImages.count == 2, "Original hoodie and blink artwork must be bundled")
+    precondition(DylandMark.hoodieImages.allSatisfy { abs($0.size.width / $0.size.height - 1000.0 / 1140.0) < 0.001 }, "Hoodie cutouts must keep matching, undistorted proportions")
+    let hoodie = DylandMark(kind: "working", style: .hoodie)
+    precondition(hoodie.eyes(at: 4.5, reducedMotion: false).height == workingMark.eyes(at: 4.5, reducedMotion: false).height)
+    precondition(hoodie.eyes(at: 4.5, reducedMotion: true).height == 30)
+    precondition(DylandMark(kind: "paused", style: .hoodie).eyes(at: 4.5, reducedMotion: false).height == 5)
     model.mascot = .capsule
     precondition(Model().mascot == .capsule)
     model.selected = ["ses_test"]

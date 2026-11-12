@@ -27,7 +27,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         makeMenu()
         makePanel()
         NotificationCenter.default.addObserver(self, selector: #selector(positionPanel), name: NSApplication.didChangeScreenParametersNotification, object: nil)
-        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(positionPanel), name: NSWorkspace.didWakeNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(didWake), name: NSWorkspace.didWakeNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(willSleep), name: NSWorkspace.willSleepNotification, object: nil)
         globalPointerMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in
             self?.updateHitRegion()
         }
@@ -94,6 +95,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         panel.contentView = NSHostingView(rootView: IslandView(model: model))
         positionPanel()
         panel.orderFrontRegardless()
+    }
+    @objc private func willSleep() {
+        model.suspendSpotify()
+        model.setHovered(false)
+    }
+    @objc private func didWake() {
+        positionPanel()
+        model.startSpotify()
     }
     @objc private func positionPanel() {
         guard panel != nil, let screen = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.screens.first else { return }
@@ -165,7 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 @main
 struct Dyland {
     @MainActor static func main() {
-        if CommandLine.arguments.contains("--self-check") { selfCheck(); return }
+        if CommandLine.arguments.contains("--self-check") { spotifySelfCheck(); selfCheck(); return }
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate

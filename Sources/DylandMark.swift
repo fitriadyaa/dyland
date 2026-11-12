@@ -22,9 +22,15 @@ struct MascotSchedule: TimelineSchedule {
 }
 
 enum MascotStyle: String, CaseIterable {
-    case capsule, ghost
+    case capsule, ghost, hoodie
 
-    var label: String { self == .capsule ? "Capsule" : "Lilac Ghost" }
+    var label: String {
+        switch self {
+        case .capsule: "Capsule"
+        case .ghost: "Lilac Ghost"
+        case .hoodie: "Hoodie"
+        }
+    }
     var color: Color {
         self == .capsule
             ? Color(red: 236 / 255, green: 236 / 255, blue: 231 / 255)
@@ -62,11 +68,38 @@ struct DylandMark: View {
         }
     }
 
+    static let hoodieImages: [NSImage] = ["Hoodie-Cutout", "Hoodie-Blink"].compactMap { name in
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png") else { return nil }
+        return NSImage(contentsOf: url)
+    }
+
+    private func drawHoodie(in context: inout GraphicsContext, eyes: (height: CGFloat, x: CGFloat, y: CGFloat)) {
+        guard Self.hoodieImages.count == 2 else { return }
+        let originalEyes = eyes.height >= 30
+        context.draw(Image(nsImage: Self.hoodieImages[originalEyes ? 0 : 1]),
+                     in: CGRect(x: 0, y: 0, width: 1000, height: 1140))
+        guard !originalEyes else { return }
+        for center in [CGPoint(x: 259, y: 592), CGPoint(x: 555, y: 708)] {
+            var eyeContext = context
+            eyeContext.translateBy(x: center.x, y: center.y)
+            eyeContext.rotate(by: .degrees(22))
+            let height = min(160, eyes.height / 30 * 160)
+            let eye = RoundedRectangle(cornerRadius: min(32, height / 2))
+                .path(in: CGRect(x: -32, y: -height / 2, width: 64, height: height))
+            eyeContext.fill(eye, with: .color(Color(red: 0.10, green: 0.10, blue: 0.10)))
+        }
+    }
+
     var body: some View {
         TimelineView(MascotSchedule(moving: kind == "working" && !attentive, paused: !animating || reduceMotion || kind == "paused")) {
             timeline in
             let eyes = eyes(at: timeline.date.timeIntervalSinceReferenceDate, reducedMotion: reduceMotion || !animating)
             Canvas { context, size in
+                if style == .hoodie {
+                    context.scaleBy(x: size.width / 1000, y: size.height / 1140)
+                    drawHoodie(in: &context, eyes: eyes)
+                    return
+                }
                 context.scaleBy(x: size.width / 116, y: size.height / 77)
                 context.translateBy(x: -8, y: -51)
                 var body = Path()
@@ -123,7 +156,7 @@ struct DylandMark: View {
                 }
             }
         }
-        .aspectRatio(116.0 / 77.0, contentMode: .fit)
+        .aspectRatio(style == .hoodie ? 1000.0 / 1140.0 : 116.0 / 77.0, contentMode: .fit)
         .accessibilityHidden(true)
     }
 }

@@ -18,6 +18,18 @@ final class Model: ObservableObject {
         didSet { UserDefaults.standard.set(mascot.rawValue, forKey: "mascot") }
     }
     @Published var sound: Bool { didSet { UserDefaults.standard.set(sound, forKey: "sound") } }
+    @Published var spotifyEnabled = UserDefaults.standard.bool(forKey: "spotifyEnabled") {
+        didSet {
+            UserDefaults.standard.set(spotifyEnabled, forKey: "spotifyEnabled")
+            spotifyProblem = nil
+            if spotifyEnabled { startSpotify() } else { suspendSpotify() }
+        }
+    }
+    @Published var spotify: SpotifyPlayback?
+    @Published var spotifyProblem: String?
+    @Published var lyrics: [LyricLine] = []
+    var spotifyPoll: Task<Void, Never>?
+    var lyricsTask: Task<Void, Never>?
     @Published var paused = false { didSet { if paused { current = nil } } }
     @Published var connected = false
     @Published var problem: String?
@@ -66,11 +78,16 @@ final class Model: ObservableObject {
     var islandActivityCount: Int { current?.needsResponse == true ? pending.count : current?.kind == "working" ? workingCount : 0 }
     var islandWidth: CGFloat {
         if expanded { return max(420, hasNotch ? notchWidth + 80 : 0) }
+        if showingSpotify { return hasNotch ? notchWidth + 100 : 260 }
         return hasNotch ? notchWidth + (current == nil ? 0 : islandActivityCount > 1 ? 128 : 100) : 212
     }
     var islandGeometry: IslandGeometry?
     var islandHeaderHeight: CGFloat { hasNotch ? max(notchHeight, 28) : 32 }
     var islandHeight: CGFloat {
+        if showingSpotify {
+            let hasLyrics = !spotifyCaption.isEmpty
+            return expanded ? (hasNotch ? islandHeaderHeight : 0) + (hasLyrics ? 150 : 76) : islandHeaderHeight + (hasLyrics ? 36 : 0)
+        }
         if expanded { return (hasNotch ? islandHeaderHeight : 0) + 58 + CGFloat(max(1, islandNotices.count)) * 44 }
         return islandHeaderHeight
     }
@@ -99,6 +116,7 @@ final class Model: ObservableObject {
         if selected.contains(id) { selected.remove(id) } else { selected.insert(id) }
     }
     func start() {
+        startSpotify()
         poll = Task { [weak self] in
             while !Task.isCancelled {
                 let read = await Task.detached(priority: .utility) { autoreleasepool { Bridge.read() } }.value
@@ -153,6 +171,9 @@ final class Model: ObservableObject {
         }
         if let urgent = fresh.last(where: { $0.needsResponse }) {
             present(urgent, now: now, audible: true)
+        } else if current?.needsResponse != true,
+                  let awaiting = pending.first(where: { !dismissed.contains(pendingKey($0)) }) {
+            present(awaiting, now: now, audible: false)
         } else if let update = fresh.last(where: { $0.kind != "resolved" && $0.kind != "working" }) {
             if current?.needsResponse == true { playSound(update, now: now) }
             else { present(update, now: now, audible: true) }
@@ -161,9 +182,9 @@ final class Model: ObservableObject {
             self.current = nil
         }
         if let current, !current.needsResponse, current.kind != "working", now > expires, !hovered { self.current = nil }
-        if current == nil {
+        if current == nil || current?.kind == "working" {
             if let awaiting = pending.first(where: { !dismissed.contains(pendingKey($0)) }) { present(awaiting, now: now, audible: false) }
-            else if let active = working.values.filter({ selected.contains($0.sessionID) }).max(by: { $0.timestamp < $1.timestamp }), connected {
+            else if current == nil, let active = working.values.filter({ selected.contains($0.sessionID) }).max(by: { $0.timestamp < $1.timestamp }), connected {
                 current = active
             }
         }
@@ -203,6 +224,7 @@ final class Model: ObservableObject {
         } catch { problem = "Failed to change launch at login: \(error.localizedDescription)" }
     }
     func openCurrent() {
+        if showingSpotify, let url = URL(string: "spotify:") { NSWorkspace.shared.open(url); return }
         guard let current, let session = session(current.sessionID) else { openSettings?(); return }
         open(session)
     }

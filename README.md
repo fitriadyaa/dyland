@@ -95,6 +95,14 @@ Dyland lives in the menu bar rather than the Dock.
 Closing the settings window does not quit it.
 Manage login permission under **System Settings > General > Login Items** if macOS requires approval.
 
+### Spotify desktop lyrics
+
+Enable **General > Spotify > Spotify lyrics**, play a track in Spotify desktop, and allow Dyland to control Spotify when macOS asks. No Spotify OAuth or Premium API access is needed.
+
+The island shows artwork and one synced lyric line; hover for song details and click to open Spotify. Completion, question, permission, and error notifications temporarily replace music. Background working indicators do not interrupt music. Recovered pending requests also interrupt music until resolved or dismissed. Playback pauses and seeks are picked up on the next poll (0.5 seconds while playing, 2 seconds while paused or Spotify is closed). Polling stops when the feature is disabled or the Mac sleeps, and restarts after wake. Temporary Spotify errors retry automatically without disabling the feature; denied Automation permission requires re-enabling it.
+
+Lyrics come from [LRCLIB](https://lrclib.net), not Spotify. Enabling this feature sends track title, artist, album, and duration to LRCLIB and downloads artwork from Spotify's artwork URL. Missing, loading, or unavailable synced lyrics hide the lyric row entirely; artwork and song details remain available. Lyrics are fetched once per track change; replay another track to retry a failed lookup. If Automation is denied, allow Spotify under **System Settings > Privacy & Security > Automation > Dyland**, then re-enable the toggle.
+
 ## Usage and behavior
 
 Hover over the notch or island to expand details.

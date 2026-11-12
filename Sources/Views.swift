@@ -87,6 +87,7 @@ struct IslandView: View {
 
     private var silhouette: IslandSilhouette { IslandSilhouette(notched: model.hasNotch, expanded: model.expanded) }
     private var status: String {
+        if model.showingSpotify, let song = model.spotify { return "\(song.title) · \(song.artist)" }
         if model.islandActivityCount > 1 {
             return model.current?.needsResponse == true ? "Needs your attention" : "Agents working"
         }
@@ -101,12 +102,17 @@ struct IslandView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
-                if model.hasNotch && (model.current == nil || model.expanded) {
-                    Color.clear.frame(height: model.islandHeaderHeight)
-                } else if model.hasNotch || !model.expanded { compactBar }
-                if model.expanded {
-                    panel
-                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+                if model.showingSpotify {
+                    if model.hasNotch && model.expanded { Color.clear.frame(height: model.islandHeaderHeight) }
+                    spotifyPanel
+                } else {
+                    if model.hasNotch && (model.current == nil || model.expanded) {
+                        Color.clear.frame(height: model.islandHeaderHeight)
+                    } else if model.hasNotch || !model.expanded { compactBar }
+                    if model.expanded {
+                        panel
+                            .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+                    }
                 }
             }
             .modifier(IslandSurface(model: model, highContrast: contrast == .increased, width: model.islandWidth, height: model.islandHeight, shoulder: silhouette.shoulder, radius: silhouette.radius))
@@ -126,11 +132,55 @@ struct IslandView: View {
         .preferredColorScheme(.dark)
     }
 
+    private var spotifyPanel: some View {
+        Button(action: model.openCurrent) {
+            VStack(spacing: model.expanded ? 12 : 0) {
+                HStack(spacing: 10) {
+                    AsyncImage(url: model.spotify?.artwork) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Image(systemName: "music.note").frame(maxWidth: .infinity, maxHeight: .infinity).background(.white.opacity(0.12))
+                    }
+                    .frame(width: model.expanded ? 44 : 22, height: model.expanded ? 44 : 22)
+                    .clipShape(RoundedRectangle(cornerRadius: model.expanded ? 7 : 4))
+                    if model.hasNotch && !model.expanded {
+                        Color.clear.frame(width: model.notchWidth + 12)
+                    } else {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(model.spotify?.title ?? "Spotify").font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                            if model.expanded {
+                                Text(model.spotify?.artist ?? "").font(.system(size: 11)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    Image(systemName: model.spotify?.playing == true ? "waveform" : "pause.fill")
+                        .font(.system(size: 12)).foregroundStyle(.green)
+                }
+                .frame(height: model.expanded ? 44 : model.islandHeaderHeight)
+                if !model.spotifyCaption.isEmpty {
+                    Text(model.spotifyCaption)
+                        .font(.system(size: model.expanded ? 15 : 12, weight: .medium))
+                        .lineLimit(model.expanded ? 2 : 1)
+                        .frame(maxWidth: .infinity, minHeight: model.expanded ? 48 : 32)
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.white.opacity(model.spotify?.playing == true ? 0.95 : 0.5))
+                }
+            }
+            .padding(.horizontal, model.expanded ? 30 : 18)
+            .padding(.vertical, model.expanded ? 16 : 0)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(status). \(model.spotifyCaption). Open Spotify")
+        .help("Open Spotify")
+    }
+
     private var compactBar: some View {
         Button(action: model.openCurrent) {
             HStack(spacing: 0) {
                 DylandMark(kind: model.current?.kind ?? (model.paused ? "paused" : nil), attentive: model.hovered, animating: !model.expanded, style: model.mascot)
-                    .frame(width: 26, height: 18)
+                    .frame(width: 26, height: model.mascot == .hoodie ? 26 : 18)
                     .frame(maxWidth: .infinity, alignment: model.hasNotch ? .trailing : .leading)
                 if model.hasNotch {
                     Color.clear.frame(width: model.notchWidth + 20)
@@ -164,7 +214,7 @@ struct IslandView: View {
             HStack {
                 HStack(spacing: 8) {
                     DylandMark(kind: model.current?.kind ?? (model.paused ? "paused" : nil), attentive: model.hovered, style: model.mascot)
-                        .frame(width: 22, height: 18)
+                        .frame(width: 22, height: model.mascot == .hoodie ? 25 : 18)
                     Text(model.current == nil ? "Dyland" : status)
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(tint)
                 }
@@ -448,8 +498,8 @@ struct SettingsView: View {
                 }
                 HStack(spacing: 12) {
                     DylandMark(kind: "working", animating: false, style: model.mascot)
-                        .frame(width: 36, height: 28)
-                    Text("Changes apply immediately. Both mascots use the same subtle eye animations.")
+                        .frame(width: 36, height: model.mascot == .hoodie ? 41 : 28)
+                    Text("Changes apply immediately. All mascots use the same subtle eye animations.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -458,6 +508,14 @@ struct SettingsView: View {
                 Toggle("Pause notifications", isOn: $model.paused)
                 Text("Sound plays for completions, questions, permissions, and errors. Limited to one sound every 2 seconds.")
                     .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Spotify") {
+                Toggle("Spotify lyrics", isOn: $model.spotifyEnabled)
+                Text("Reads Spotify desktop playback using macOS Automation. Sends song title, artist, album, and duration to LRCLIB for synced lyrics. OpenCode notifications take priority over music.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let problem = model.spotifyProblem {
+                    Text(problem).font(.caption).foregroundStyle(.orange).textSelection(.enabled)
+                }
             }
             Section("Open sessions") {
                 Picker("Terminal", selection: $model.terminal) {
